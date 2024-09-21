@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Virtual environment
+venv/
+env/
+
+# Database files
+*.sqlite
+*.db
+
+# Keys and sensitive data
+secret.key
+
+# System-specific files
+.DS_Store
+Thumbs.db
