@@ -1,6 +1,6 @@
 import sqlite3
 from unittest.mock import patch
-from encryptor import Encryptor, load_key
+from encryptor.encryptor import Encryptor, load_key
 from os import path, getcwd, makedirs
 
 
