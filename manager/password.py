@@ -60,7 +60,7 @@ class PasswordFilter(Password):
         login: str = None,
         password: str = None,
     ) -> None:
-        super().__init__(category, description, login, password)
+        super().__init__(category, description, login, password, id)
 
     @Password.id.setter
     def id(self, new_id: str):
