@@ -1,9 +1,10 @@
 import sqlite3
+from typing import Any
 from unittest.mock import patch
 from encryptor.encryptor import Encryptor, load_key
 from os import path, getcwd, makedirs
 from manager import password
-from manager.password import Password
+from manager.password import Password, PasswordFilter
 
 
 class PasswordManager:
@@ -33,36 +34,72 @@ class PasswordManager:
         self._conn.commit()
 
     def add_password(self, password: Password) -> None:
-        """Adiciona uma nova senha criptografada ao banco de dados."""
-        encrypted_password = self._encryptor.encrypt(password.password)
-        query = "INSERT INTO passwords (category, description, login, encrypted_password) VALUES (?, ?, ?, ?);"
-        self._conn.execute(
-            query,
-            (
-                password.category,
-                password.description,
-                password.login,
-                encrypted_password,
-            ),
-        )
-        self._conn.commit()
+        try:
+            """Adiciona uma nova senha criptografada ao banco de dados."""
+            encrypted_password = self._encryptor.encrypt(password.password)
+            query = """
+            INSERT INTO passwords
+                (
+                    category, 
+                    description, 
+                    login, 
+                    encrypted_password
+                ) 
+            VALUES (?, ?, ?, ?);"""
+            self._conn.execute(
+                query,
+                (
+                    password.category,
+                    password.description,
+                    password.login,
+                    encrypted_password,
+                ),
+            )
+            self._conn.commit()
+        except Exception as e:
+            print("add_password() error:", e)
 
-    def get_password(self, id):
-        """Recupera e descriptografa a senha pelo ID."""
-        query = """SELECT   category, 
-                            description, 
-                            login, 
-                            encrypted_password 
-                    FROM    passwords;"""
-        # cursor = self._conn.execute(query, (id,))
-        cursor = self._conn.execute(query, "")
-        result = cursor.fetchone()
+    def get_password(self, password_filter: PasswordFilter = None) -> list[Password]:
+        try:
+            """Recupera e descriptografa a senha pelo ID."""
+            query = """
+            SELECT  category, 
+                    description, 
+                    login, 
+                    encrypted_password, 
+                    id 
+            FROM    passwords 
+            """
+            params: list[str] = []
+            # Se um filtro for fornecido, adiciona condições ao WHERE
+            if password_filter:
+                query += " WHERE 1=1"  # Placeholder para começar a adicionar condições
+                if password_filter.category:
+                    query += " AND category = ?"
+                    params.append(password_filter.category)
 
-        if result:
-            decrypted_password = self._encryptor.decrypt(result[3])
-            password = Password(result[0], result[1], result[2], decrypted_password)
-            return password
-        return None
+                if password_filter.description:
+                    query += " AND description = ?"
+                    params.append(password_filter.description)
+
+                if password_filter.login:
+                    query += " AND login = ?"
+                    params.append(password_filter.login)
+
+            cursor: sqlite3.Cursor = self._conn.execute(query, params)
+            results: list[Any] = cursor.fetchall()
+
+            passwords: list[Password] = []
+            for result in results:
+                decrypted_password = self._encryptor.decrypt(result[3])
+                password = Password(
+                    result[0], result[1], result[2], decrypted_password, result[4]
+                )
+                passwords.append(password)
+        except Exception as e:
+            print("get_password() error: ", e)
+
+        return passwords
 
     def upd_password(
         self,
@@ -120,23 +157,32 @@ def main():
     # print("Banco de dados configurado com sucesso!")
 
     # Exemplo de como adicionar uma senha criptografada
-    senha = Password("Social", "Minha conta do Facebook", "meu_login", "minha_senha123")
-    manager.add_password(senha)
-    print("Senha adicionada com sucesso!")
+    # senha = Password("Social", "Minha conta do Facebook", "meu_login", "minha_senha123")
+    # manager.add_password(senha)
+    # print("Senha adicionada com sucesso!")
 
     # Exemplo de como consultar e descriptografar a senha
-    # senha = manager.get_password(1)
+    filter = PasswordFilter()
+    senhas = manager.get_password()
 
-#     if senha:
-#         print(        
-# f"""Categoria: {senha.category}
-# Descrição: {senha.description}
-# Login: {senha.login}
-# Senha: {senha.password}"""
-#         )
+    for senha in senhas:
+        if senha:
+            print(
+                f"""
+                Id: {senha.id}
+                Categoria: {senha.category}
+                Descrição: {senha.description}
+                Login: {senha.login}
+                Senha: {senha.password}
+                """)
 
     # Exemplo de como alterar senha
-    # manager.upd_password(1, new_category="Novo Categoria", new_description="Nova descrição", new_plain_password="nova_senha123")
+    # manager.upd_password(
+    #     1,
+    #     new_category="Novo Categoria",
+    #     new_description="Nova descrição",
+    #     new_plain_password="nova_senha123",
+    # )
 
     # Exemplo de como deletar
     # manager.del_password(1)
