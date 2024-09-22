@@ -153,11 +153,35 @@ class PasswordManager:
             return False
         return True
 
-    def del_password(self, id) -> bool:
-        """Deleta uma senha pelo ID."""
-        query = "DELETE FROM passwords WHERE id = ?;"
-        cursor = self._conn.execute(query, (id,))
-        self._conn.commit()
+    def del_password(self, password_filter: PasswordFilter) -> bool:
+        """Deleta uma ou mais senhas"""
+        try:
+            query = "DELETE FROM passwords"
+            params: list[str] = []
+
+            # Se um filtro for fornecido, adiciona condições ao WHERE
+            if password_filter:
+                query += " WHERE 1=1"  # Placeholder para começar a adicionar condições
+                if password_filter.id:
+                    query += " AND id = ?"
+                    params.append(password_filter.id)
+
+                if password_filter.category:
+                    query += " AND category = ?"
+                    params.append(password_filter.category)
+
+                if password_filter.description:
+                    query += " AND description = ?"
+                    params.append(password_filter.description)
+
+                if password_filter.login:
+                    query += " AND login = ?"
+                    params.append(password_filter.login)
+
+            cursor = self._conn.execute(query, params)
+            self._conn.commit()
+        except Exception as e:
+            print("del_password() error:", e)
 
         # Verificar se alguma linha foi afetada
         return cursor.rowcount > 0
@@ -193,15 +217,21 @@ def main():
     #         )
 
     # Exemplo de como alterar senha
-    new_password = Password(
-        category="Novo Categoria",
-        description="Nova descrição",
-        login="login_teste",
-        password="nova_senha123",
-    )
-    manager.upd_password(3, new_password)
+    # new_password = Password(
+    #     category="Novo Categoria",
+    #     description="Nova descrição",
+    #     login="login_teste",
+    #     password="nova_senha123",
+    # )
+    # manager.upd_password(14, new_password)
 
     # Exemplo de como deletar
-    # manager.del_password(1)
+    # filter = PasswordFilter()
+    # filter.id = "7"
+    # filter.category = "Novo Categoria"
+    # filter.description = "Minha conta do Facebook"
+    # filter.login = "login_teste"
 
-    # manager._db_close()
+    # manager.del_password(filter)
+
+    manager._db_close()
