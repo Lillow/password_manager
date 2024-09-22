@@ -74,6 +74,10 @@ class PasswordManager:
             # Se um filtro for fornecido, adiciona condições ao WHERE
             if password_filter:
                 query += " WHERE 1=1"  # Placeholder para começar a adicionar condições
+                if password_filter.id:
+                    query += " AND id = ?"
+                    params.append(password_filter.id)
+
                 if password_filter.category:
                     query += " AND category = ?"
                     params.append(password_filter.category)
@@ -101,42 +105,53 @@ class PasswordManager:
 
         return passwords
 
-    def upd_password(
-        self,
-        id,
-        new_category=None,
-        new_description=None,
-        new_login=None,
-        new_plain_password=None,
-    ):
+    def upd_password(self, id: str, new_password: Password) -> bool:
+        """The id must be passed in the password object for the method to work correctly"""
+        try:
+            filter = PasswordFilter()
+            filter.id = id
+            password: Password = self.get_password(password_filter=filter)[0]
 
-        query = "SELECT encrypted_password FROM passwords WHERE id = ?;"
-        cursor = self._conn.execute(query, (id,))
-        result = cursor.fetchone()
+            if new_password.category:
+                password.category = new_password.category
 
-        if result:
-            # Atualizar os valores que foram fornecidos (os que não forem, mantêm os atuais)
-            query_update = """UPDATE passwords SET 
-                                    category = COALESCE(?, category),
-                                    description = COALESCE(?, description),
-                                    login = COALESCE(?, login),
-                                    encrypted_password = COALESCE(?, encrypted_password)
-                                WHERE id = ?;"""
+            if new_password.description:
+                password.description = new_password.description
 
-            # Se uma nova senha for passada, criptografá-la
-            if new_plain_password:
-                new_encrypted_password = self._encryptor.encrypt(new_plain_password)
-            else:
-                new_encrypted_password = None
+            if new_password.login:
+                password.login = new_password.login
 
-            # Executar a atualização
-            self._conn.execute(
-                query_update,
-                (new_category, new_description, new_login, new_encrypted_password, id),
-            )
-            self._conn.commit()
-            return True
-        return False
+            if new_password.password:
+                password.password = new_password.password
+                password.password = self._encryptor.encrypt(password.password)
+
+            params: list[str] = [
+                password.category,
+                password.description,
+                password.login,
+                password.password,
+                password.id,
+            ]
+
+            if password:
+                # Atualizar os valores que foram fornecidos (os que não forem, mantêm os atuais)
+                query_update = """
+                UPDATE passwords SET 
+                                category    =   COALESCE(?, category),
+                                description =   COALESCE(?, description),
+                                login       =   COALESCE(?, login),
+                                encrypted_password = COALESCE(?, encrypted_password)
+                WHERE id = ?;"""
+
+                self._conn.execute(
+                    query_update,
+                    (params),
+                )
+                self._conn.commit()
+        except Exception as e:
+            print("upd_password() error:", e)
+            return False
+        return True
 
     def del_password(self, id) -> bool:
         """Deleta uma senha pelo ID."""
@@ -162,29 +177,31 @@ def main():
     # print("Senha adicionada com sucesso!")
 
     # Exemplo de como consultar e descriptografar a senha
-    filter = PasswordFilter()
-    senhas = manager.get_password()
+    # filter = PasswordFilter()
+    # senhas = manager.get_password()
 
-    for senha in senhas:
-        if senha:
-            print(
-                f"""
-                Id: {senha.id}
-                Categoria: {senha.category}
-                Descrição: {senha.description}
-                Login: {senha.login}
-                Senha: {senha.password}
-                """)
+    # for senha in senhas:
+    #     if senha:
+    #         print(
+    #             f"""
+    #             Id: {senha.id}
+    #             Categoria: {senha.category}
+    #             Descrição: {senha.description}
+    #             Login: {senha.login}
+    #             Senha: {senha.password}
+    #             """
+    #         )
 
     # Exemplo de como alterar senha
-    # manager.upd_password(
-    #     1,
-    #     new_category="Novo Categoria",
-    #     new_description="Nova descrição",
-    #     new_plain_password="nova_senha123",
-    # )
+    new_password = Password(
+        category="Novo Categoria",
+        description="Nova descrição",
+        login="login_teste",
+        password="nova_senha123",
+    )
+    manager.upd_password(3, new_password)
 
     # Exemplo de como deletar
     # manager.del_password(1)
 
-    manager._db_close()
+    # manager._db_close()

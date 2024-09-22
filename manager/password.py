@@ -5,7 +5,7 @@ class Password:
         description: str,
         login: str,
         password: str,
-        id=None,
+        id: str = None,
     ) -> None:
         self.__id: str = id
         self.__category: str = category
@@ -21,17 +21,34 @@ class Password:
     def category(self) -> str:
         return self.__category
 
+    @category.setter
+    def category(self, category: str):
+
+        self.__category: str = category
+
     @property
     def description(self) -> str:
         return self.__description
+
+    @description.setter
+    def description(self, description: str):
+        self.__description: str = description
 
     @property
     def login(self) -> str:
         return self.__login
 
+    @login.setter
+    def login(self, login: str):
+        self.__login: str = login
+
     @property
     def password(self) -> str:
         return self.__password
+
+    @password.setter
+    def password(self, password: str):
+        self.__password: str = password
 
 
 class PasswordFilter(Password):
@@ -49,15 +66,3 @@ class PasswordFilter(Password):
     def id(self, new_id: str):
         # Modificando diretamente o atributo privado usando name mangling
         self._Password__id: str = new_id
-
-    @Password.category.setter
-    def category(self, new_category: str):
-        self._Password__category: str = new_category
-
-    @Password.description.setter
-    def description(self, new_description: str):
-        self._Password__description: str = new_description
-
-    @Password.login.setter
-    def login(self, new_login: str):
-        self._Password__login: str = new_login
