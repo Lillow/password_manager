@@ -153,37 +153,16 @@ class PasswordManager:
             return False
         return True
 
-    def del_password(self, password_filter: PasswordFilter) -> bool:
-        """Deleta uma ou mais senhas"""
+    def del_password(self, id: str) -> bool:
         try:
-            query = "DELETE FROM passwords"
+            query = "DELETE FROM passwords WHERE id = ?;"
             params: list[str] = []
 
-            # Se um filtro for fornecido, adiciona condições ao WHERE
-            if password_filter:
-                query += " WHERE 1=1"  # Placeholder para começar a adicionar condições
-                if password_filter.id:
-                    query += " AND id = ?"
-                    params.append(password_filter.id)
-
-                if password_filter.category:
-                    query += " AND category = ?"
-                    params.append(password_filter.category)
-
-                if password_filter.description:
-                    query += " AND description = ?"
-                    params.append(password_filter.description)
-
-                if password_filter.login:
-                    query += " AND login = ?"
-                    params.append(password_filter.login)
-
-            cursor = self._conn.execute(query, params)
+            cursor: sqlite3.Cursor = self._conn.execute(query, (id,))
             self._conn.commit()
         except Exception as e:
             print("del_password() error:", e)
 
-        # Verificar se alguma linha foi afetada
         return cursor.rowcount > 0
 
     def _db_close(self) -> None:
@@ -226,12 +205,12 @@ def main():
     # manager.upd_password(14, new_password)
 
     # Exemplo de como deletar
-    # filter = PasswordFilter()
-    # filter.id = "7"
+    filter = PasswordFilter()
+    filter.id = "5"
     # filter.category = "Novo Categoria"
     # filter.description = "Minha conta do Facebook"
     # filter.login = "login_teste"
 
-    # manager.del_password(filter)
+    manager.del_password_(filter)
 
     manager._db_close()
